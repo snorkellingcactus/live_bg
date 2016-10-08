@@ -42,7 +42,8 @@ int gif_get_frame_left( GifFileType *gif_file , unsigned int frame_number )
 {
 	return gif_get_frame_desc( gif_file , frame_number ).Left;
 }
-DATA32 *gif_get_frame_data( GifFileType *gif_file , int frame_number )
+
+DATA32 *gif_get_frame_data( GifFileType *gif_file , unsigned  int frame_number )
 {
 	SavedImage	*frame=gif_get_frame( gif_file , frame_number );
 	
@@ -66,42 +67,35 @@ DATA32 *gif_get_frame_data( GifFileType *gif_file , int frame_number )
 
 	int TransparentColor=gcb.TransparentColor;
 
-	unsigned int width=frame_desc.Width;
-	unsigned int height=frame_desc.Height;
+	unsigned int len=frame_desc.Width*frame_desc.Height;
 
-	DATA32 *imlib_data=new DATA32[width*height];
+	DATA32 *imlib_data=new DATA32[len];
 
-	unsigned int  j=0;
-
-	for( unsigned int h = 0 ; h < height ; h++ )
+	for
+	(
+		unsigned int j=0 ;
+		j < len ;
+		++j
+	)
 	{
+		DATA32 d32_pixel=0xffffffff;
 
-		for( unsigned int w = 0 ; w < width ; w++ )
+		if( *rasters == TransparentColor )
 		{
-			int r=(int) colors[ (* rasters) ].Red	;				
-			int g=(int) colors[ (* rasters) ].Green	;
-			int b=(int) colors[ (* rasters) ].Blue	;
-
-			DATA32 d32_pixel=0xffffffff;
-
-			if( (* rasters) == TransparentColor )
-			{
-				d32_pixel=( d32_pixel & 0xffffff00 );
-			}
-			else
-			{
-				d32_pixel=( d32_pixel | 0xffffffff );
-			}
-
-			d32_pixel=( ( d32_pixel << 8 ) | r );
-			d32_pixel=( ( d32_pixel << 8 ) | g );
-			d32_pixel=( ( d32_pixel << 8 ) | b );
-
-			*(imlib_data+j)=d32_pixel;
-
-			++j;
-			++rasters;
+			d32_pixel&= 0xffffff00;
 		}
+		else
+		{
+			d32_pixel|=0xffffffff;
+		}
+
+		d32_pixel=( ( d32_pixel << 8 ) | colors[ *rasters ].Red		);
+		d32_pixel=( ( d32_pixel << 8 ) | colors[ *rasters ].Green	);
+		d32_pixel=( ( d32_pixel << 8 ) | colors[ *rasters ].Blue	);
+
+		*(imlib_data+j)=d32_pixel;
+
+		++rasters;
 	}
 
 	return imlib_data;
@@ -253,7 +247,7 @@ int main(int argc, char **argv)
 
 	int error;
 
-	GifFileType *gif_file=gif_open_file( "./bad5.gif" , error );
+	GifFileType *gif_file=gif_open_file( "./animated3.gif" , error );
 	
 	gif_file_tmp gif_loop_data;
 	gif_loop_data.SWidth=gif_file->SWidth;
@@ -329,6 +323,8 @@ int main(int argc, char **argv)
 					height
 				)
 			);
+
+			cout << "Image "<< i << " " << sizeof(*(gif_images+i)) <<endl;
 		}
 
 		DGifCloseFile( gif_file , &error );
