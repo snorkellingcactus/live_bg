@@ -1,0 +1,3 @@
+[submodule "jpeg-compressor"]
+	path = jpeg-compressor
+	url = https://github.com/pornel/jpeg-compressor.git

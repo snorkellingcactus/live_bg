@@ -11,10 +11,28 @@
 #include <signal.h>
 
 #include <iostream>
-#include "./gif_err.c"
+#include <string>
+
+#include "jpeg-compressor/jpge.cpp"
+#include "jpeg-compressor/jpgd.cpp"
 
 using namespace std;
 
+void log_pixel_uint8( jpge::uint8 *pixel )
+{
+	cout << (int) *(pixel+3)	<< " - ";
+	cout << (int) *(pixel+2)	<< " - ";
+	cout << (int) *(pixel+1)	<< " - ";
+	cout << (int) *pixel		<< endl;
+}
+void log_pixel( DATA32 pixel )
+{
+	cout <<(int) ((0xff000000 & pixel) >> 24)<< " - ";
+	cout <<(int) ((0x00ff0000 & pixel) >> 16)<< " - ";
+	cout <<(int) ((0x0000ff00 & pixel) >> 8)<<  " - ";
+	cout <<(int) (0x000000ff & pixel);
+	cout << endl;
+}
 //gif_is_animated();
 GifFileType *gif_open_file( const char *name , int &error )
 {
@@ -47,7 +65,7 @@ DATA32 *gif_get_frame_data( GifFileType *gif_file , unsigned  int frame_number )
 {
 	SavedImage	*frame=gif_get_frame( gif_file , frame_number );
 	
-	GifImageDesc frame_desc=gif_get_frame_desc( gif_file , frame_number );
+	GifImageDesc frame_desc=frame->ImageDesc;
 	GifColorType *colors;
 
 	if( frame_desc.ColorMap == NULL )
@@ -70,7 +88,6 @@ DATA32 *gif_get_frame_data( GifFileType *gif_file , unsigned  int frame_number )
 	unsigned int len=frame_desc.Width*frame_desc.Height;
 
 	DATA32 *imlib_data=new DATA32[len];
-
 	for
 	(
 		unsigned int j=0 ;
@@ -93,13 +110,24 @@ DATA32 *gif_get_frame_data( GifFileType *gif_file , unsigned  int frame_number )
 		d32_pixel=( ( d32_pixel << 8 ) | colors[ *rasters ].Green	);
 		d32_pixel=( ( d32_pixel << 8 ) | colors[ *rasters ].Blue	);
 
-		*(imlib_data+j)=d32_pixel;
+		imlib_data[j]=d32_pixel;
 
 		++rasters;
 	}
 
 	return imlib_data;
 };
+/*
+jpge::uint8 *data32_to_uint8( DATA32 *imlib_data , unsigned int length )
+{
+	uint8 *jpg_data = new uint8[length];
+
+	for( int i=0 ; i<length ; i+=4 )
+	{
+		jpg_data
+	}
+}
+*/
 int setRootAtoms ( Pixmap pixmap , Display *display , Window *window )
 {
   Atom atom_root, atom_eroot, type;
@@ -153,16 +181,19 @@ void XSetBackgroundImage( Display *display , Window window , Pixmap pixmap , uns
 	//	XSync( disp , false );  
 
 	//cout << "Left:" << left << " Top:" << top << endl;
+
 	imlib_render_image_on_drawable( left , top );
 	//imlib_render_image_on_drawable_at_size( left, top , w , h );
 	//imlib_free_image( );
+
+	imlib_free_image_and_decache();
 	
 	setRootAtoms( pixmap , display , &window );
 
 	XSetWindowBackgroundPixmap ( display , window , pixmap );
 
 	//XFreePixmap( disp , pixmap );
-	XClearWindow ( display , window );
+	//XClearWindow ( display , window );
 	XFlush( display );
 }
 
@@ -183,6 +214,11 @@ struct gif_file_tmp
 	int frames_len;
 	int SWidth;
 	int SHeight;
+};
+struct gif_file_compressed
+{
+	unsigned char *buff;
+	int buff_size;
 };
 
 int main(int argc, char **argv)
@@ -247,8 +283,8 @@ int main(int argc, char **argv)
 
 	int error;
 
-	GifFileType *gif_file=gif_open_file( "./animated3.gif" , error );
-	
+	GifFileType *gif_file=gif_open_file( "./test.gif" , error );
+
 	gif_file_tmp gif_loop_data;
 	gif_loop_data.SWidth=gif_file->SWidth;
 	gif_loop_data.SHeight=gif_file->SHeight;
@@ -256,7 +292,10 @@ int main(int argc, char **argv)
 
 	if( gif_loop_data.frames_len )
 	{
-		Imlib_Image *gif_images=new Imlib_Image[gif_loop_data.frames_len];
+		gif_file_compressed gif_images[gif_loop_data.frames_len];
+		//Imlib_Image *gif_images=new Imlib_Image[gif_loop_data.frames_len];
+		//unsigned char **gif_images = new unsigned char*[ gif_loop_data.frames_len ];
+
 		
 		gif_loop_data.width=new int[gif_loop_data.frames_len];
 		gif_loop_data.height=new int[gif_loop_data.frames_len];
@@ -283,9 +322,8 @@ int main(int argc, char **argv)
 			cout << gif_loop_data.top[i] << endl;
 			cout << "Interlace:" << (gif_file->SavedImages+i)->ImageDesc.Interlace << endl;
 */
-			imlib_context_set_image
-			(
-				*(gif_images+i)=imlib_create_image_using_data(
+			imlib_context_set_image(
+				imlib_create_image_using_data(
 					gif_loop_data.width[i],
 					gif_loop_data.height[i],
 					gif_get_frame_data( gif_file , i )
@@ -301,8 +339,8 @@ int main(int argc, char **argv)
 			);
 
 			imlib_free_image_and_decache();
-			imlib_context_set_image
-			(
+
+			imlib_context_set_image (
 				imlib_create_image_from_drawable(
 					pixmap,
 					0,
@@ -313,43 +351,69 @@ int main(int argc, char **argv)
 				)
 			);
 
-			imlib_context_set_image(
-				*(gif_images+i)=imlib_create_cropped_scaled_image(
-					0,
-					0,
-					gif_loop_data.SWidth,
-					gif_loop_data.SHeight,
-					width,
-					height
-				)
+			Imlib_Image scaled=imlib_create_cropped_scaled_image(
+				0,
+				0,
+				gif_loop_data.SWidth,
+				gif_loop_data.SHeight,
+				width,
+				height
 			);
 
-			cout << "Image "<< i << " " << sizeof(*(gif_images+i)) <<endl;
+			imlib_context_set_image(
+				scaled
+			);
+
+			jpge::params jpg_params;
+			jpg_params.m_quality=9;
+			jpg_params.m_subsampling=jpge::H2V2;
+			jpg_params.m_no_chroma_discrim_flag=false;
+		
+			int jpg_buff_size=3*width*height;;
+
+			jpge::compress_image_to_jpeg_file_in_memory(
+				gif_images[i].buff = new unsigned char[ jpg_buff_size ] ,
+				gif_images[i].buff_size=jpg_buff_size ,
+				width ,
+				height ,
+				4 ,
+				( jpge::uint8* ) imlib_image_get_data(),
+				jpg_params
+			);
+
+			imlib_free_image_and_decache();
+
+			cout << "Image " << i <<endl;
 		}
 
 		DGifCloseFile( gif_file , &error );
 
-
-
 		imlib_context_set_dither		( 0 );
 		imlib_context_set_blend			( 0 );
-		imlib_set_cache_size( 10 * 1024 * 1024 );
+		imlib_set_cache_size( 0 );
+		//imlib_set_cache_size( 10 * 1024 * 1024 );
 
 		i=0;
 		while( 1 && ! interrupt )
 		{
-/*
-			if(top>1)
-			{
-				top=-h+top-1;
-				left=21;
-			}
+			unsigned int* decompressed=( unsigned int * ) jpgd::decompress_jpeg_image_from_memory (
+						gif_images[i].buff ,
+						gif_images[i].buff_size ,
+						(int*) &width ,
+						(int*) &height ,
+						(int*) new int(4) ,
+						4
+					);
+			
+			imlib_context_set_image	(
+				imlib_create_image_using_data(
+					width,
+					height,
+					decompressed
+				)
+			);
 
-			//cout << "Frame " << i ;
-			//cout << " Top: " << gif_get_frame_top( gif_file , i );
-			//cout << " Left: " << gif_get_frame_left( gif_file , i ) << endl;
-*/
-			imlib_context_set_image		( *(gif_images+i) );
+			delete decompressed;
 
 			imlib_image_set_has_alpha		( 0 );
 			imlib_image_set_irrelevant_alpha( 1	);
@@ -365,7 +429,7 @@ int main(int argc, char **argv)
 				0
 			);
 
-			usleep( 50000 );
+			usleep( 5000 );
 
 			++i;
 
@@ -377,7 +441,6 @@ int main(int argc, char **argv)
 
 		XClearWindow (disp, win);
 		XFreePixmap( disp , pixmap );
-		XFlush( disp );
 		XSync( disp , false );  
 		XKillClient (disp, AllTemporary);
 	}
