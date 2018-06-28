@@ -193,8 +193,9 @@ void XSetBackgroundImage( Display *display , Window window , Pixmap pixmap , uns
 	XSetWindowBackgroundPixmap ( display , window , pixmap );
 
 	//XFreePixmap( disp , pixmap );
-	//XClearWindow ( display , window );
-	XFlush( display );
+	XClearWindow ( display , window );
+	//XFlush( display );
+	//XSync(display, true);
 }
 
 bool interrupt=false;
@@ -429,7 +430,7 @@ int main(int argc, char **argv)
 				0
 			);
 
-			usleep( 5000 );
+			usleep( 100000 );
 
 			++i;
 
