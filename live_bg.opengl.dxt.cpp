@@ -1,4 +1,4 @@
-//g++ -o test test.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11` -lgif -ltxc_dxtn
+//g++ -o live_bg.opengl.dxt live_bg.opengl.dxt.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11` -lgif -ltxc_dxtn
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -437,7 +437,7 @@ int main(int argc, char* argv[])
 
 		setRootAtoms( pixmap , disp , &win );
 		XSetWindowBackgroundPixmap ( disp , win , pixmap );
-		XFlush( disp );
+		XClearWindow ( disp , win );
 
 		usleep( 50000 );
 		//sleep(1);

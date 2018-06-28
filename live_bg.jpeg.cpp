@@ -1,4 +1,4 @@
-//g++ -o example $x86_64_pc_linux_gnu_CXXFLAGS bg_color.cpp `pkg-config.pkg-config --libs imlib2 x11`  -lgif
+//g++ -o live_bg live_bg.cpp `pkg-config.pkg-config --libs imlib2 x11`  -lgif
 /* include X11 stuff */
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>

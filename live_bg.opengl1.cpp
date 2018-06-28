@@ -1,4 +1,4 @@
-//g++ -o test test.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11` -lgif
+//g++ -o live_bg.opengl1 live_bg.opengl1.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11` -lgif
 
 #include <stdio.h>
 #include <stdlib.h>

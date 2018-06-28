@@ -1,4 +1,4 @@
-//g++ -o test test.mybackup.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11 IL ILU` -lgif
+//g++ -o live_bg.opengl2 live_bg.opengl2.cpp `pkg-config.pkg-config --libs gl glew imlib2 x11 IL ILU` -lgif
 
 #include <stdio.h>
 #include <stdlib.h>
